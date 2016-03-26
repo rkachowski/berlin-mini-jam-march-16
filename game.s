@@ -7,8 +7,12 @@ INCLUDE "lib/sprite.inc" ; sprite goodies
 TICK		EQU	$0fff
 GROUND		EQU	100
 CHAR_WIDTH	EQU	20
+CHAR_STEP	EQU	2
 LEFT_WALL 	EQU	10
 RIGHT_WALL 	EQU	SCRN_X-CHAR_WIDTH
+
+LIGHT_LEFT	EQU	50
+LIGHT_RIGHT	EQU	65
 
 ; variables
 	SpriteAttr	CharSprite
@@ -85,7 +89,7 @@ setuptitle:
 
 setupchar:
 	PutSpriteYAddr	CharSprite,GROUND
-	PutSpriteXAddr	CharSprite,LEFT_WALL+1
+	PutSpriteXAddr	CharSprite,LEFT_WALL
  	ld	a,$01
  	ld 	[CharSpriteTileNum], a
  	ld	a,%00000000       
@@ -102,15 +106,9 @@ handlekeys:
 	push	af
 	and	PADF_RIGHT
 	call	nz,keypress_move
+	call	z,bumpchar
 
-updatechar:
-	GetSpriteXAddr CharSprite
-	cp LEFT_WALL
-	jr z,updatechar_end
-	dec a
-	PutSpriteXAddr CharSprite,a
-
-updatechar_end:
+mainloop_end:
 	pop af
 	jr mainloop
 
@@ -118,8 +116,15 @@ keypress_move:
 	GetSpriteXAddr CharSprite
 	cp RIGHT_WALL
 	ret z
-	inc a
-	inc a
+	add a,CHAR_STEP
+	PutSpriteXAddr CharSprite,a
+	ret
+
+bumpchar:
+	GetSpriteXAddr CharSprite
+	cp LEFT_WALL
+	jr z,mainloop_end
+	sub a,CHAR_STEP
 	PutSpriteXAddr CharSprite,a
 	ret
 
