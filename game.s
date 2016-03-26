@@ -12,10 +12,12 @@ LEFT_WALL 	EQU	10
 RIGHT_WALL 	EQU	SCRN_X-CHAR_WIDTH
 
 LIGHT_LEFT	EQU	50
-LIGHT_RIGHT	EQU	65
+LIGHT_WIDTH	EQU	25
+LIGHT_THRESH	EQU	80
 
 ; variables
 	SpriteAttr	CharSprite
+	LoByteVar	LightAcc
 
 ; interrupts
 SECTION "Vblank",HOME[$0040]
@@ -95,27 +97,32 @@ setupchar:
  	ld	a,%00000000       
  	ld	[CharSpriteFlags],a 
 
-mainloop:
-	halt
-	nop			; always nop after halt
+setuplight:
+	ld	a,0
+	ld	[LightAcc],a
 
+mainloop:
 handlekeys:
 	ld	bc,TICK
 	call	simpleDelay
 	call	GetKeys
-	push	af
 	and	PADF_RIGHT
 	call	nz,keypress_move
 	call	z,bumpchar
-
+updatelight:
+	ld	a,[LightAcc]
+	inc	a
+	ld	[LightAcc],a
+	cp	LIGHT_THRESH
+	call	nc, drawLightOn
+	call	c, drawLightOff
 mainloop_end:
-	pop af
 	jr mainloop
 
 keypress_move:
 	GetSpriteXAddr CharSprite
 	cp RIGHT_WALL
-	ret z
+	ret nc
 	add a,CHAR_STEP
 	PutSpriteXAddr CharSprite,a
 	ret
@@ -123,11 +130,21 @@ keypress_move:
 bumpchar:
 	GetSpriteXAddr CharSprite
 	cp LEFT_WALL
-	jr z,mainloop_end
+	ret c
 	sub a,CHAR_STEP
 	PutSpriteXAddr CharSprite,a
 	ret
 
+drawLightOff:
+ 	ld	a,$01
+ 	ld 	[CharSpriteTileNum], a
+	ret
+
+drawLightOn:
+ 	ld	a,$02
+ 	ld 	[CharSpriteTileNum], a
+	ret
+	
 Title:
 	DB  "wow much vintage"
 TitleEnd:
